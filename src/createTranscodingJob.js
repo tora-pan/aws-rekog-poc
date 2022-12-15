@@ -8,12 +8,11 @@ AWS.config.mediaconvert = {
   endpoint: "https://lxlxpswfb.mediaconvert.us-east-1.amazonaws.com",
 };
 
-const createTranscodingJob = async (templateData, fileName, startTime) => {
+const createTranscodingJob = async (jobTemplate) => {
+  const { Name } = jobTemplate;
   const params = {
-    Queue: process.env["AWS_ELEMENTAL_MEDIACONVERT_DEFAULT_QUE_ARN"],
-    JobTemplate: "onDemand-auto-segmenter",
-    // templateData.JobTemplate.Name |
-    // process.env["AWS_ELEMENTAL_MEDIACONVERT_JOB_TEMPLATE_NAME"],
+    Queue: process.env["AWS_MEDIA_CONVERT_DEFAULT_QUE_ARN"],
+    JobTemplate: Name,
     Role: process.env["AWS_ELEMENTAL_MEDIACONVERT_JOB_ROLE_ARN"],
     Settings: {
       Inputs: [
@@ -36,20 +35,28 @@ const createTranscodingJob = async (templateData, fileName, startTime) => {
           DeblockFilter: "DISABLED",
           DenoiseFilter: "DISABLED",
           TimecodeSource: "ZEROBASED",
-          FileInput: `s3://${process.env["ON_DEMAND_TRANSCODED_VIDEOS_BUCKET"]}/001-720-FOR308-F03-04-1-0ef39234-3730-4ab3-af1c-49fe482c95b6.mp4`,
+          FileInput: `s3://${process.env["ON_DEMAND_TRANSCODED_VIDEOS_BUCKET"]}/${process.env["ON_DEMAND_VIDEO_FILE_NAME"]}`,
         },
       ],
-      OutputGroups: [
-        {
-          OutputGroupSettings: {
-            HlsGroupSettings: {
-              Destination: `s3://ondemand-sandbox-transcoded-videos/test/${fileName}`,
-            },
-          },
-        },
-      ],
+      // OutputGroups: [
+      //   {
+      //     OutputGroupSettings: {
+      //       HlsGroupSettings: {
+      //         Destination: `s3://ondemand-sandbox-transcoded-videos/test/${fileName}`,
+      //       },
+      //     },
+      //   },
+      // ],
     },
   };
+  // const params = {
+  //   Queue: process.env["AWS_ELEMENTAL_MEDIACONVERT_DEFAULT_QUE_ARN"],
+  //   JobTemplate: "onDemand-auto-segmenter",
+  //   // templateData.JobTemplate.Name |
+  //   // process.env["AWS_ELEMENTAL_MEDIACONVERT_JOB_TEMPLATE_NAME"],
+  //   Role: process.env["AWS_ELEMENTAL_MEDIACONVERT_JOB_ROLE_ARN"],
+
+  // };
   try {
     const result = await new AWS.MediaConvert({
       apiVersion: "2017-08-29",

@@ -5,6 +5,8 @@ import { runSegmentDetectionAndGetResults } from "./autoDetect.js";
 import dotenv from "dotenv";
 dotenv.config();
 
+console.log(process.env);
+
 const dummyData = [
   {
     DurationFrames: 340,
@@ -304,25 +306,21 @@ const simulateDataFetching = () => {
 };
 
 const createMediaConvertSegmentedTemplate = async () => {
-  //  const results = await runSegmentDetectionAndGetResults();
-  for (let i = 0; i < dummyData.length; i++) {
+  const results = await runSegmentDetectionAndGetResults();
+  for (let i = 0; i < results.length; i++) {
     let newSegment = {
-      "StartTimecode": dummyData[i].StartTimecodeSMPTE,
-      "EndTimecode": dummyData[i].EndTimecodeSMPTE,
+      "StartTimecode": results[i].StartTimecodeSMPTE,
+      "EndTimecode": results[i].EndTimecodeSMPTE,
     };
-    let startTime = dummyData[i].StartTimecodeSMPTE;
     let fileName = `slide ${i + 1}`;
     try {
-      const createdTemplate = await createJobTemplate(newSegment);
+      const createdTemplate = await createJobTemplate(newSegment, fileName);
       console.log(`created template with`, newSegment);
       console.log("- - - - - - - - - - ");
       const createdTranscodingJob = await createTranscodingJob(
-        createdTemplate,
-        fileName,
-        startTime
+        createdTemplate.JobTemplate
       );
       console.log("created the job");
-      console.log({ createdTranscodingJob });
       console.log("- - - - - - - - - - ");
       const deletedTemplate = await deleteJobTemplate(
         createdTemplate?.JobTemplate.Name
@@ -333,5 +331,5 @@ const createMediaConvertSegmentedTemplate = async () => {
   }
 };
 
-simulateDataFetching();
-// createMediaConvertSegmentedTemplate();
+// simulateDataFetching();
+createMediaConvertSegmentedTemplate();
