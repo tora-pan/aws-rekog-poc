@@ -27,7 +27,6 @@ const snsClient = new SNSClient({
   region: "us-east-1",
 });
 
-console.log(process.env.AWS_DEFAULT_REGION);
 
 const ts = Date.now();
 const snsTopicName = "AmazonRekognitionExample" + ts;

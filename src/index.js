@@ -5,8 +5,6 @@ import { runSegmentDetectionAndGetResults } from "./autoDetect.js";
 import dotenv from "dotenv";
 dotenv.config();
 
-console.log(process.env);
-
 const dummyData = [
   {
     DurationFrames: 340,
