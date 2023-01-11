@@ -116,7 +116,6 @@ const createJobTemplate = async (inputSegment, fileName) => {
     const data = await emcClient.send(new CreateJobTemplateCommand(params));
     return data;
   } catch (err) {
-    console.log("this is failing");
     console.log(err);
   }
 };
