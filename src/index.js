@@ -3,6 +3,7 @@ import { createTranscodingJob } from "./createTranscodingJob.js";
 import { runSegmentDetectionAndGetResults } from "./autoDetect.js";
 
 import dotenv from "dotenv";
+import { runTextDetectionAndGetResults } from "./autoDetectText.js";
 dotenv.config();
 
 const dummyData = [
@@ -303,6 +304,53 @@ const simulateDataFetching = () => {
   }, 1000);
 };
 
+const msToTime = (s) => {
+  // Pad to 2 or 3 digits, default is 2
+  const pad = (n, z) => {
+    z = z || 2;
+    return ("00" + n).slice(-z);
+  };
+
+  var ms = s % 1000;
+  s = (s - ms) / 1000;
+  var secs = s % 60;
+  s = (s - secs) / 60;
+  var mins = s % 60;
+  var hrs = (s - mins) / 60;
+
+  return pad(hrs) + ":" + pad(mins) + ":" + pad(secs) + ":" + pad(ms);
+};
+
+const getTextFromVideo = async () => {
+  const results = await runTextDetectionAndGetResults();
+  console.log({ results });
+
+  // send to input clippings
+  for (let segment in results) {
+    let timecodeStart = msToTime(results[segment].timeStamps.start);
+    let timecodeEnd = msToTime(results[segment].timeStamps.end);
+    let newSegment = {
+      "StartTimecode": timecodeStart,
+      "EndTimecode": timecodeEnd,
+    };
+    try {
+      const createdTemplate = await createJobTemplate(
+        newSegment,
+        results[segment].curSlide
+      );
+      console.log(`created template with`, newSegment);
+      await createTranscodingJob(createdTemplate.JobTemplate);
+      console.log("created the job");
+      await deleteJobTemplate(createdTemplate?.JobTemplate.Name);
+      console.log("deleted the template");
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  console.log(results);
+};
+
 const createMediaConvertSegmentedTemplate = async () => {
   const results = await runSegmentDetectionAndGetResults();
   for (let i = 0; i < results.length; i++) {
@@ -314,15 +362,9 @@ const createMediaConvertSegmentedTemplate = async () => {
     try {
       const createdTemplate = await createJobTemplate(newSegment, fileName);
       console.log(`created template with`, newSegment);
-      console.log("- - - - - - - - - - ");
-      const createdTranscodingJob = await createTranscodingJob(
-        createdTemplate.JobTemplate
-      );
+      await createTranscodingJob(createdTemplate.JobTemplate);
       console.log("created the job");
-      console.log("- - - - - - - - - - ");
-      const deletedTemplate = await deleteJobTemplate(
-        createdTemplate?.JobTemplate.Name
-      );
+      await deleteJobTemplate(createdTemplate?.JobTemplate.Name);
     } catch (err) {
       console.log(err);
     }
@@ -330,4 +372,5 @@ const createMediaConvertSegmentedTemplate = async () => {
 };
 
 // simulateDataFetching();
-createMediaConvertSegmentedTemplate();
+// createMediaConvertSegmentedTemplate();
+getTextFromVideo();
