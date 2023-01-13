@@ -45,64 +45,105 @@ const runTextDetectionAndGetResults = async () => {
   }
 };
 
+const getKeyByValue = (object, value) => {
+  return Object.keys(object).find((key) => object[key].curSlide === value);
+};
+
 const getTextDetectionResults = async (startJobId) => {
   console.log("Retrieving Segment Detection results");
   // Set max results, paginationToken and finished will be updated depending on response values
-  let maxResults = 10;
+  let maxResults = 1000;
   let paginationToken = "";
   let finished = false;
   // let results = [];
+  let slideTextResults = {};
+  let currentSlide = 0;
+
+  let whileCounter = 0;
 
   // Begin retrieving segment detection results
   while (finished == false) {
-    var response = await rekClient.send(
-      new GetTextDetectionCommand({
-        JobId: startJobId,
-        SortBy: "TIMESTAMP",
-      })
-    );
-    // log metadata
-    // console.log(response);
-    let slideTextResults = {};
-    let currentSlide = 0;
-    response.TextDetections.map((segment) => {
-      if (segment.TextDetection.Type === "WORD") {
-        return;
-      }
-
-      let textResult = segment.TextDetection.DetectedText.replace(
-        "undefined",
-        ""
+    try {
+      console.log({ whileCounter });
+      whileCounter++;
+      var response = await rekClient.send(
+        new GetTextDetectionCommand({
+          JobId: startJobId,
+          MaxResults: maxResults,
+          SortBy: "TIMESTAMP",
+          NextToken: paginationToken,
+        })
       );
+      console.log("waited for response");
+      response.TextDetections.map((segment) => {
+        if (segment.TextDetection.Type === "WORD") {
+          return;
+        }
 
-      if (slideTextResults[textResult]?.curSlide < currentSlide) {
-        console.log(`duplicate detected at ${segment.Timestamp}.`);
-        return;
+        let textResult = segment.TextDetection.DetectedText.replace(
+          "undefined",
+          ""
+        );
+
+        if (slideTextResults[textResult]?.curSlide < currentSlide) {
+          const keyToSet = getKeyByValue(slideTextResults, currentSlide);
+
+          slideTextResults[keyToSet]["timeStamps"].push(segment.Timestamp);
+          return;
+        }
+
+        if (!slideTextResults[textResult]) {
+          console.log("added slide for the first time");
+          currentSlide++;
+          slideTextResults[textResult] = {
+            curSlide: currentSlide,
+            timeStamps: [],
+          };
+        }
+        if (slideTextResults && currentSlide) {
+          const keyToSet = getKeyByValue(slideTextResults, currentSlide);
+          if (
+            slideTextResults[keyToSet]["timeStamps"].length > 1 &&
+            slideTextResults[keyToSet]["timeStamps"][
+              slideTextResults[keyToSet]["timeStamps"].length - 1
+            ] > segment.Timestamp
+          ) {
+            return;
+          }
+          slideTextResults[keyToSet]["timeStamps"].push(segment.Timestamp);
+          console.log(
+            `adding normally: ${keyToSet} the timestamp ${segment.Timestamp}`
+          );
+        }
+
+        // slideTextResults[textResult].timeStamps.push(segment.Timestamp);
+      });
+
+      if (paginationToken === undefined) {
+        console.log("finishing now");
+        finished = true;
+        for (let item in slideTextResults) {
+          console.log("adding all items to be processed");
+          console.log(slideTextResults[item].timeStamps);
+          slideTextResults[item].timeStamps = {
+            start: slideTextResults[item].timeStamps[0],
+            end: slideTextResults[item].timeStamps[
+              slideTextResults[item].timeStamps.length - 1
+            ],
+          };
+        }
+        console.log("returning the slideResults now");
+        return slideTextResults;
       }
-
-      if (!slideTextResults[textResult]) {
-        currentSlide++;
-        slideTextResults[textResult] = {
-          curSlide: currentSlide,
-          timeStamps: [],
-        };
+      if (response.hasOwnProperty("NextToken")) {
+        paginationToken = response["NextToken"];
+        console.log("set the pagination token to : ", paginationToken);
       }
-      // catch a previously seen slide.
-
-      slideTextResults[textResult].timeStamps.push(segment.Timestamp);
-    });
-
-    for (let item in slideTextResults) {
-      slideTextResults[item].timeStamps = {
-        start: slideTextResults[item].timeStamps[0],
-        end: slideTextResults[item].timeStamps[
-          slideTextResults[item].timeStamps.length - 1
-        ],
-      };
+      console.log("logging the results from the try");
+      console.log(response);
+    } catch (err) {
+      console.log(err);
     }
-    console.log(slideTextResults);
-    finished = true;
-    return slideTextResults;
   }
 };
 

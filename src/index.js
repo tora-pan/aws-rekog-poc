@@ -318,12 +318,14 @@ const msToTime = (s) => {
   var mins = s % 60;
   var hrs = (s - mins) / 60;
 
-  return pad(hrs) + ":" + pad(mins) + ":" + pad(secs) + ":" + pad(ms);
+  // return pad(hrs) + ":" + pad(mins) + ":" + pad(secs) + ":" + pad(ms);
+  return pad(hrs) + ":" + pad(mins) + ":" + pad(secs) + ":00";
 };
 
 const getTextFromVideo = async () => {
   const results = await runTextDetectionAndGetResults();
-  console.log({ results });
+  // console.log({ results });
+  console.log('coming from getTextFromVideo function call')
 
   // send to input clippings
   for (let segment in results) {
