@@ -55,17 +55,12 @@ const getTextDetectionResults = async (startJobId) => {
   let maxResults = 1000;
   let paginationToken = "";
   let finished = false;
-  // let results = [];
   let slideTextResults = {};
   let currentSlide = 0;
-
-  let whileCounter = 0;
 
   // Begin retrieving segment detection results
   while (finished == false) {
     try {
-      console.log({ whileCounter });
-      whileCounter++;
       var response = await rekClient.send(
         new GetTextDetectionCommand({
           JobId: startJobId,
@@ -74,7 +69,6 @@ const getTextDetectionResults = async (startJobId) => {
           NextToken: paginationToken,
         })
       );
-      console.log("waited for response");
       response.TextDetections.map((segment) => {
         if (segment.TextDetection.Type === "WORD") {
           return;
@@ -87,13 +81,19 @@ const getTextDetectionResults = async (startJobId) => {
 
         if (slideTextResults[textResult]?.curSlide < currentSlide) {
           const keyToSet = getKeyByValue(slideTextResults, currentSlide);
-
+          if (
+            slideTextResults[keyToSet]["timeStamps"].length > 1 &&
+            slideTextResults[keyToSet]["timeStamps"][
+              slideTextResults[keyToSet]["timeStamps"].length - 1
+            ] > segment.Timestamp
+          ) {
+            return;
+          }
           slideTextResults[keyToSet]["timeStamps"].push(segment.Timestamp);
           return;
         }
 
         if (!slideTextResults[textResult]) {
-          console.log("added slide for the first time");
           currentSlide++;
           slideTextResults[textResult] = {
             curSlide: currentSlide,
@@ -111,20 +111,14 @@ const getTextDetectionResults = async (startJobId) => {
             return;
           }
           slideTextResults[keyToSet]["timeStamps"].push(segment.Timestamp);
-          console.log(
-            `adding normally: ${keyToSet} the timestamp ${segment.Timestamp}`
-          );
         }
 
         // slideTextResults[textResult].timeStamps.push(segment.Timestamp);
       });
 
       if (paginationToken === undefined) {
-        console.log("finishing now");
         finished = true;
         for (let item in slideTextResults) {
-          console.log("adding all items to be processed");
-          console.log(slideTextResults[item].timeStamps);
           slideTextResults[item].timeStamps = {
             start: slideTextResults[item].timeStamps[0],
             end: slideTextResults[item].timeStamps[
@@ -132,15 +126,11 @@ const getTextDetectionResults = async (startJobId) => {
             ],
           };
         }
-        console.log("returning the slideResults now");
         return slideTextResults;
       }
       if (response.hasOwnProperty("NextToken")) {
         paginationToken = response["NextToken"];
-        console.log("set the pagination token to : ", paginationToken);
       }
-      console.log("logging the results from the try");
-      console.log(response);
     } catch (err) {
       console.log(err);
     }
