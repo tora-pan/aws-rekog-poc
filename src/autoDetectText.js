@@ -15,8 +15,8 @@ const rekClient = new RekognitionClient({
 });
 let startJobId = "";
 
-const videoName = "short-ver-dup.mp4";
-// "001-720-FOR308-F03-04-1-0ef39234-3730-4ab3-af1c-49fe482c95b6.mp4";
+const videoName = // "short-ver-dup.mp4";
+  "001-720-FOR308-F03-04-1-0ef39234-3730-4ab3-af1c-49fe482c95b6.mp4";
 
 const runTextDetectionAndGetResults = async () => {
   try {
